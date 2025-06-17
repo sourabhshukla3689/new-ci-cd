@@ -116,10 +116,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-m2
           
-      - name: Run SonarQube analysis (Fixed coverage paths)
+      - name: Run SonarQube analysis (Direct token)
         run: |
-          echo "🔍 Running SonarQube analysis with proper coverage configuration..."
-          ./mvnw clean verify sonar:sonar \
+         echo "🔍 Running SonarQube analysis..."
+            ./mvnw clean verify sonar:sonar \
             -Dsonar.projectKey=sourabhshukla3689_new-ci-cd \
             -Dsonar.organization=sourabhshukla3689 \
             -Dsonar.host.url=https://sonarcloud.io \
@@ -130,7 +130,8 @@ jobs:
             -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml \
             -Dsonar.junit.reportPaths=target/surefire-reports \
             -Dsonar.java.binaries=target/classes \
-            -Dsonar.java.test.binaries=target/test-classes
+            -Dsonar.java.test.binaries=target/test-classes \
+      -Dsonar.exclusions=**/DemoApplication.java
 
   # SAST Security Scanning with Snyk (Direct token)
   sast-scan:
