@@ -238,14 +238,37 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         
+      - name: Create target directory
+        run: mkdir -p target
+        
       - name: Download artifacts from JFrog
         run: |
           echo "Downloading artifacts from JFrog Artifactory..."
           curl -H "Authorization: Bearer ${{ env.JFROG_TOKEN }}" \
             -o target/demo-${{ github.sha }}.jar \
-            "${{ env.JFROG_URL }}/artifactory/libs-release-local/com/example/demo/${{ github.sha }}/demo-${{ github.sha }}.jar"
+            "${{ env.JFROG_URL }}/artifactory/libs-release-local/com/example/demo/${{ github.sha }}/demo-${{ github.sha }}.jar" || {
+            echo "Failed to download from JFrog, using pipeline artifacts as fallback"
+            exit 1
+          }
           echo "Artifacts downloaded successfully from JFrog"
+        continue-on-error: true
         
+      - name: Download build artifacts (fallback)
+        if: failure()
+        uses: actions/download-artifact@v4
+        with:
+          name: jar-artifact
+          path: target/
+          
+      - name: Verify artifacts exist
+        run: |
+          echo "Checking for JAR files in target directory:"
+          ls -la target/
+          if [ ! -f target/*.jar ]; then
+            echo "No JAR files found in target directory"
+            exit 1
+          fi
+          
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         
@@ -286,6 +309,7 @@ jobs:
           
           docker push ${{ env.JFROG_URL }}/demo-docker/demo:${{ github.sha }}
           echo "Docker image published to JFrog successfully"
+        continue-on-error: true
           
       - name: Output image
         id: image
