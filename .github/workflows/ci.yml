@@ -69,8 +69,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-m2
           
-      - name: Run tests
-        run: ./mvnw clean test
+      - name: Run tests with coverage
+        run: |
+          ./mvnw clean test jacoco:report
+          echo "📊 Coverage report generated at target/site/jacoco/"
         
       - name: Build application
         run: ./mvnw clean package -DskipTests
@@ -80,8 +82,14 @@ jobs:
         with:
           name: jar-artifact
           path: target/*.jar
+          
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: target/site/jacoco/
 
-  # Code Quality Analysis with SonarQube (Direct token)
+  # Code Quality Analysis - Force CI-based analysis and bypass Automatic Analysis
   code-analysis:
     needs: build-and-test
     runs-on: ubuntu-latest
@@ -116,10 +124,10 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-m2
           
-      - name: Run SonarQube analysis (Direct token)
+      - name: Run SonarQube analysis (Force CI-based, bypass Automatic Analysis)
         run: |
-         echo "🔍 Running SonarQube analysis..."
-            ./mvnw clean verify sonar:sonar \
+          echo "🔍 Running SonarQube analysis with forced CI mode..."
+          ./mvnw clean verify sonar:sonar \
             -Dsonar.projectKey=sourabhshukla3689_new-ci-cd \
             -Dsonar.organization=sourabhshukla3689 \
             -Dsonar.host.url=https://sonarcloud.io \
@@ -131,7 +139,10 @@ jobs:
             -Dsonar.junit.reportPaths=target/surefire-reports \
             -Dsonar.java.binaries=target/classes \
             -Dsonar.java.test.binaries=target/test-classes \
-            -Dsonar.exclusions=**/DemoApplication.java
+            -Dsonar.scm.provider=git \
+            -Dsonar.branch.name=main \
+            -Dsonar.working.directory=/tmp/sonar \
+            -Dsonar.scanner.force-deprecated-java-version=false
 
   # SAST Security Scanning with Snyk (Direct token)
   sast-scan:
@@ -201,7 +212,7 @@ jobs:
           name: dependency-check-report
           path: reports/
 
-  # Build and Push Docker Image //
+  # Build and Push Docker Image
   build-docker:
     needs: [code-analysis, sast-scan, sca-scan]
     runs-on: ubuntu-latest
