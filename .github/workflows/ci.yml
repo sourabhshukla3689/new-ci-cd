@@ -131,7 +131,7 @@ jobs:
             -Dsonar.junit.reportPaths=target/surefire-reports \
             -Dsonar.java.binaries=target/classes \
             -Dsonar.java.test.binaries=target/test-classes \
-      -Dsonar.exclusions=**/DemoApplication.java
+            -Dsonar.exclusions=**/DemoApplication.java
 
   # SAST Security Scanning with Snyk (Direct token)
   sast-scan:
