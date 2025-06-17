@@ -10,6 +10,9 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  JFROG_URL: https://sourabhshukla3689.jfrog.io
+  JFROG_USERNAME: SOURABH.SHUKLA@svvvindore.onmicrosoft.com
+  JFROG_TOKEN: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyMDI1LTA2LTE3VDIyLTI5LTU1LTIwNS1iYXRva2VuLWJ3M29iYzF2IiwiaXNzIjoic3RvcmUiLCJzdWIiOiJNeUpGcm9nLzE5MTBETVRDU0UwNTk0OEBzdnZ2aW5kb3JlLm9ubWljcm9zb2Z0LmNvbSIsImF1ZCI6ImpmYm9AKiIsInNjcCI6InN1YnNjcmlwdGlvbjo5NDUwMDkyOTI6YXBpIiwiaWF0IjoxNzUwMTk5Mzk1LCJleHAiOjE3ODE3MzUzOTUsImV4dCI6IntcInJlZnJlc2hhYmxlXCI6dHJ1ZSxcInJldm9jYWJsZVwiOnRydWV9In0.IjNrsbr4E5XI9DKDW-2-1d_uCrdgh4QGyT6vsuENDptYkasqzyl50faJX8ZaUMTLzHYDOqW_3zPuAgjlWuJyqp5Qju6FWudH756DFQE4XZGzHQFA6eFHrKPSRKD0oBSolI-2T54DESrXQBxZHIab9STo-G4VEj3kW434lRk2kD3vH-wMtf0C1GTsBvlI00pyKw8Slwura5Mk29GpRKe6THGd-hXGYp3oFvj06VP7PnoSsjjYz5O5I0c2bi4vXD1yYAe8BAblPob2kvw2pVoL712gTQyeYYncqvvUB9IuQD3wif0iFdBXamaQfPPQNZ8EdDgysrWYQxCbKHzCzDGDnA
 
 jobs:
   # Deploy to Development
@@ -21,6 +24,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         
+      - name: Download artifacts from JFrog
+        run: |
+          echo "Downloading artifacts from JFrog for development deployment..."
+          curl -H "Authorization: Bearer ${{ env.JFROG_TOKEN }}" \
+            -o demo-${{ github.event.workflow_run.head_sha }}.jar \
+            "${{ env.JFROG_URL }}/artifactory/libs-release-local/com/example/demo/${{ github.event.workflow_run.head_sha }}/demo-${{ github.event.workflow_run.head_sha }}.jar"
+          echo "Artifacts downloaded from JFrog successfully"
+        
       - name: Log in to Container Registry
         uses: docker/login-action@v3
         with:
@@ -30,10 +41,12 @@ jobs:
           
       - name: Deploy to development
         run: |
-          echo "🚀 Deploying to development environment..."
-          echo "📦 Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop-${{ github.event.workflow_run.head_sha }}"
-          echo "🔍 Branch: ${{ github.event.workflow_run.head_branch }}"
-          echo "✅ Development deployment completed!"
+          echo "Deploying to development environment..."
+          echo "JAR Artifact: demo-${{ github.event.workflow_run.head_sha }}.jar"
+          echo "GitHub Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop-${{ github.event.workflow_run.head_sha }}"
+          echo "JFrog Image: ${{ env.JFROG_URL }}/demo-docker/demo:${{ github.event.workflow_run.head_sha }}"
+          echo "Branch: ${{ github.event.workflow_run.head_branch }}"
+          echo "Development deployment completed!"
 
   # Deploy to Production
   deploy-prod:
@@ -44,6 +57,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         
+      - name: Download artifacts from JFrog
+        run: |
+          echo "Downloading artifacts from JFrog for production deployment..."
+          curl -H "Authorization: Bearer ${{ env.JFROG_TOKEN }}" \
+            -o demo-${{ github.event.workflow_run.head_sha }}.jar \
+            "${{ env.JFROG_URL }}/artifactory/libs-release-local/com/example/demo/${{ github.event.workflow_run.head_sha }}/demo-${{ github.event.workflow_run.head_sha }}.jar"
+          echo "Artifacts downloaded from JFrog successfully"
+        
       - name: Log in to Container Registry
         uses: docker/login-action@v3
         with:
@@ -53,15 +74,17 @@ jobs:
           
       - name: Deploy to production
         run: |
-          echo "🚀 Deploying to production environment..."
-          echo "📦 Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${{ github.event.workflow_run.head_sha }}"
-          echo "🔍 Branch: ${{ github.event.workflow_run.head_branch }}"
-          echo "✅ Production deployment completed!"
+          echo "Deploying to production environment..."
+          echo "JAR Artifact: demo-${{ github.event.workflow_run.head_sha }}.jar"
+          echo "GitHub Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${{ github.event.workflow_run.head_sha }}"
+          echo "JFrog Image: ${{ env.JFROG_URL }}/demo-docker/demo:${{ github.event.workflow_run.head_sha }}"
+          echo "Branch: ${{ github.event.workflow_run.head_branch }}"
+          echo "Production deployment completed!"
           
       - name: Post-deployment verification
         run: |
-          echo "🔍 Running post-deployment checks..."
-          echo "✅ All checks passed!"
+          echo "Running post-deployment checks..."
+          echo "All checks passed!"
 
   # Rollback capability
   rollback:
@@ -71,6 +94,6 @@ jobs:
     steps:
       - name: Rollback deployment
         run: |
-          echo "⚠️ Deployment failed, initiating rollback..."
-          echo "🔄 Rolling back to previous stable version..."
-          echo "✅ Rollback completed successfully!"
+          echo "Deployment failed, initiating rollback..."
+          echo "Rolling back to previous stable version..."
+          echo "Rollback completed successfully!"

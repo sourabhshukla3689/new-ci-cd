@@ -9,6 +9,9 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  JFROG_URL: https://sourabhshukla3689.jfrog.io
+  JFROG_USERNAME: SOURABH.SHUKLA@svvvindore.onmicrosoft.com
+  JFROG_TOKEN: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiIyMDI1LTA2LTE3VDIyLTI5LTU1LTIwNS1iYXRva2VuLWJ3M29iYzF2IiwiaXNzIjoic3RvcmUiLCJzdWIiOiJNeUpGcm9nLzE5MTBETVRDU0UwNTk0OEBzdnZ2aW5kb3JlLm9ubWljcm9zb2Z0LmNvbSIsImF1ZCI6ImpmYm9AKiIsInNjcCI6InN1YnNjcmlwdGlvbjo5NDUwMDkyOTI6YXBpIiwiaWF0IjoxNzUwMTk5Mzk1LCJleHAiOjE3ODE3MzUzOTUsImV4dCI6IntcInJlZnJlc2hhYmxlXCI6dHJ1ZSxcInJldm9jYWJsZVwiOnRydWV9In0.IjNrsbr4E5XI9DKDW-2-1d_uCrdgh4QGyT6vsuENDptYkasqzyl50faJX8ZaUMTLzHYDOqW_3zPuAgjlWuJyqp5Qju6FWudH756DFQE4XZGzHQFA6eFHrKPSRKD0oBSolI-2T54DESrXQBxZHIab9STo-G4VEj3kW434lRk2kD3vH-wMtf0C1GTsBvlI00pyKw8Slwura5Mk29GpRKe6THGd-hXGYp3oFvj06VP7PnoSsjjYz5O5I0c2bi4vXD1yYAe8BAblPob2kvw2pVoL712gTQyeYYncqvvUB9IuQD3wif0iFdBXamaQfPPQNZ8EdDgysrWYQxCbKHzCzDGDnA
 
 jobs:
   # Pre-commit checks
@@ -37,11 +40,11 @@ jobs:
           
       - name: Simple secret check
         run: |
-          echo "🔍 Running basic secret scan..."
+          echo "Running basic secret scan..."
           if grep -r -i -E "(password|secret|key|token|credential)" --include="*.java" --include="*.properties" --include="*.yml" --include="*.yaml" src/ || true; then
-            echo "⚠️ Potential secrets found in source files. Please review."
+            echo "Potential secrets found in source files. Please review."
           else
-            echo "✅ No obvious secrets detected in source files."
+            echo "No obvious secrets detected in source files."
           fi
 
   # Build and Test
@@ -72,10 +75,18 @@ jobs:
       - name: Run tests with coverage
         run: |
           ./mvnw clean test jacoco:report
-          echo "📊 Coverage report generated at target/site/jacoco/"
+          echo "Coverage report generated at target/site/jacoco/"
         
       - name: Build application
         run: ./mvnw clean package -DskipTests
+        
+      - name: Upload artifacts to JFrog Artifactory
+        run: |
+          echo "Publishing artifacts to JFrog Artifactory..."
+          curl -H "Authorization: Bearer ${{ env.JFROG_TOKEN }}" \
+            -T target/*.jar \
+            "${{ env.JFROG_URL }}/artifactory/libs-release-local/com/example/demo/${{ github.sha }}/demo-${{ github.sha }}.jar"
+          echo "Artifacts published successfully to JFrog"
         
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -88,89 +99,6 @@ jobs:
         with:
           name: coverage-reports
           path: target/site/jacoco/
-
-  # Code Quality Analysis - SonarQube Integration (Currently Disabled)
-  code-analysis:
-    needs: build-and-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-          
-      - name: Make mvnw executable
-        run: chmod +x ./mvnw
-          
-      - name: Cache SonarQube packages
-        uses: actions/cache@v4
-        with:
-          path: ~/.sonar/cache
-          key: ${{ runner.os }}-sonar
-          restore-keys: |
-            ${{ runner.os }}-sonar
-          
-      - name: Cache Maven dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-m2
-
-      # ========================================
-      # SONARQUBE ANALYSIS - CURRENTLY DISABLED
-      # ========================================
-      # Uncomment the following section when SonarQube is configured:
-      # 
-      # 1. Add SONAR_TOKEN to GitHub repository secrets
-      # 2. Add SONAR_HOST_URL to GitHub repository secrets (if using SonarQube server)
-      # 3. Configure sonar-project.properties in project root or add Maven SonarQube plugin
-      # 
-      # - name: Run SonarQube analysis
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      #     SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-      #   run: |
-      #     echo "🔍 Running SonarQube analysis..."
-      #     ./mvnw clean verify sonar:sonar \
-      #       -Dsonar.projectKey=${{ github.repository_owner }}_${{ github.event.repository.name }} \
-      #       -Dsonar.organization=${{ github.repository_owner }} \
-      #       -Dsonar.host.url=${{ env.SONAR_HOST_URL }} \
-      #       -Dsonar.login=${{ env.SONAR_TOKEN }} \
-      #       -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
-      #     echo "✅ SonarQube analysis completed"
-      #
-      # Alternative for SonarCloud:
-      # - name: Run SonarCloud analysis
-      #   uses: SonarSource/sonarcloud-github-action@master
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      #   with:
-      #     args: >
-      #       -Dsonar.projectKey=${{ github.repository_owner }}_${{ github.event.repository.name }}
-      #       -Dsonar.organization=${{ github.repository_owner }}
-      #       -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
-      
-      # PLACEHOLDER: SonarQube analysis step
-      - name: Code Quality Analysis Placeholder
-        run: |
-          echo "🔍 Code Quality Analysis Step"
-          echo "📋 SonarQube analysis is currently disabled"
-          echo "📝 To enable SonarQube:"
-          echo "   1. Configure SONAR_TOKEN secret in repository settings"
-          echo "   2. Configure SONAR_HOST_URL secret (if using SonarQube server)"
-          echo "   3. Uncomment the SonarQube analysis section above"
-          echo "   4. Ensure sonar-project.properties exists or Maven plugin is configured"
-          echo "✅ Code analysis placeholder completed"
 
   # SAST Security Scanning with Snyk
   sast-scan:
@@ -189,30 +117,16 @@ jobs:
       - name: Make mvnw executable
         run: chmod +x ./mvnw
         
-      - name: Cache Maven dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2
-          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-m2
-        
       - name: Install Snyk CLI
         run: |
           npm install -g snyk
           
       - name: Run Snyk security test
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run: |
-          echo "🔍 Running Snyk security analysis..."
-          if [ -n "$SNYK_TOKEN" ]; then
-            snyk auth $SNYK_TOKEN
-            snyk test --severity-threshold=high --all-projects || echo "⚠️ Snyk found security issues"
-          else
-            echo "⚠️ SNYK_TOKEN not configured, skipping security scan"
-          fi
-          echo "✅ Security analysis completed"
+          echo "Running Snyk security analysis..."
+          snyk auth 8574ac4a-db72-44b6-9fdc-d5d03e4db324
+          snyk test --severity-threshold=high --all-projects || echo "Snyk found security issues"
+          echo "Security analysis completed"
 
   # SCA Security Scanning with OWASP
   sca-scan:
@@ -248,7 +162,7 @@ jobs:
 
   # Build and Push Docker Image
   build-docker:
-    needs: [build-and-test, code-analysis, sast-scan, sca-scan]
+    needs: [build-and-test, sast-scan, sca-scan]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     outputs:
@@ -257,12 +171,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: jar-artifact
-          path: target/
-          
+      - name: Download artifacts from JFrog
+        run: |
+          echo "Downloading artifacts from JFrog Artifactory..."
+          curl -H "Authorization: Bearer ${{ env.JFROG_TOKEN }}" \
+            -o target/demo-${{ github.sha }}.jar \
+            "${{ env.JFROG_URL }}/artifactory/libs-release-local/com/example/demo/${{ github.sha }}/demo-${{ github.sha }}.jar"
+          echo "Artifacts downloaded successfully from JFrog"
+        
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
         
@@ -292,6 +208,18 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           
+      - name: Publish Docker image to JFrog
+        run: |
+          echo "Publishing Docker image to JFrog Artifactory..."
+          docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.sha }} \
+            ${{ env.JFROG_URL }}/demo-docker/demo:${{ github.sha }}
+          
+          echo ${{ env.JFROG_TOKEN }} | docker login ${{ env.JFROG_URL }} \
+            --username ${{ env.JFROG_USERNAME }} --password-stdin
+          
+          docker push ${{ env.JFROG_URL }}/demo-docker/demo:${{ github.sha }}
+          echo "Docker image published to JFrog successfully"
+          
       - name: Output image
         id: image
         run: echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}-${{ github.sha }}" >> $GITHUB_OUTPUT
@@ -304,7 +232,6 @@ jobs:
     steps:
       - name: Container scan placeholder
         run: |
-          echo "🔍 Container security scanning step"
-          echo "📦 Image: ${{ needs.build-docker.outputs.image }}"
-          echo "ℹ️ Container scanning completed"
-          echo "✅ Container scan step completed"
+          echo "Container security scanning step"
+          echo "Image: ${{ needs.build-docker.outputs.image }}"
+          echo "Container scanning completed"
