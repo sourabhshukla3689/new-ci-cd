@@ -100,6 +100,73 @@ jobs:
           name: coverage-reports
           path: target/site/jacoco/
 
+  # Code Quality Analysis - SonarQube Integration (Currently Disabled)
+  code-analysis:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          
+      - name: Make mvnw executable
+        run: chmod +x ./mvnw
+          
+      - name: Cache SonarQube packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: |
+            ${{ runner.os }}-sonar
+          
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-m2
+
+      # SonarQube analysis - commented out for now
+      # - name: Run SonarQube analysis
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      #     SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      #   run: |
+      #     echo "Running SonarQube analysis..."
+      #     ./mvnw clean verify sonar:sonar \
+      #       -Dsonar.projectKey=${{ github.repository_owner }}_${{ github.event.repository.name }} \
+      #       -Dsonar.organization=${{ github.repository_owner }} \
+      #       -Dsonar.host.url=${{ env.SONAR_HOST_URL }} \
+      #       -Dsonar.login=${{ env.SONAR_TOKEN }} \
+      #       -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+      #     echo "SonarQube analysis completed"
+      
+      # PLACEHOLDER: SonarQube analysis step
+      - name: Code Quality Analysis Placeholder
+        run: |
+          echo "=== Code Quality Analysis Step ==="
+          echo "SonarQube analysis is currently disabled"
+          echo "This is a placeholder for code quality analysis"
+          echo ""
+          echo "To enable SonarQube analysis:"
+          echo "   1. Configure SONAR_TOKEN secret in repository settings"
+          echo "   2. Configure SONAR_HOST_URL secret if using SonarQube server"
+          echo "   3. Uncomment the SonarQube analysis section above"
+          echo "   4. Ensure sonar-project.properties exists or Maven plugin is configured"
+          echo ""
+          echo "Current JaCoCo coverage reports are available at: target/site/jacoco/"
+          echo "Code quality analysis placeholder completed successfully"
+
   # SAST Security Scanning with Snyk
   sast-scan:
     needs: build-and-test
@@ -162,7 +229,7 @@ jobs:
 
   # Build and Push Docker Image
   build-docker:
-    needs: [build-and-test, sast-scan, sca-scan]
+    needs: [build-and-test, code-analysis, sast-scan, sca-scan]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     outputs:
@@ -232,6 +299,7 @@ jobs:
     steps:
       - name: Container scan placeholder
         run: |
-          echo "Container security scanning step"
+          echo "=== Container Security Scanning Step ==="
           echo "Image: ${{ needs.build-docker.outputs.image }}"
-          echo "Container scanning completed"
+          echo "Container security scanning completed"
+          echo "Container scan step completed successfully"
