@@ -258,7 +258,7 @@ jobs:
         id: image
         run: echo "image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}" >> $GITHUB_OUTPUT
 
-  # Container Security Scanning with Prisma Cloud (COMMENTED OUT FOR FUTURE USE)
+  # Container Security Scanning with Prisma Cloud (COMMENTED OUT FOR FUTURE USE)//
   container-scan:
     needs: build-docker
     runs-on: ubuntu-latest
