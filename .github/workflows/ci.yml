@@ -192,7 +192,7 @@ jobs:
           name: dependency-check-report
           path: reports/
 
-  # Build and Push Docker Image
+  # Build and Push Docker Image //
   build-docker:
     needs: [code-analysis, sast-scan, sca-scan]
     runs-on: ubuntu-latest
